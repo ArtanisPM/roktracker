@@ -1,6 +1,7 @@
 {
   "$defs": {
     "RankingMisc": {
+      "description": "Additional info how to handle the scan.\n\nAttributes:\n    threshold (int): The threshold value to use when preprocessing the image\n    invert (bool): Whether to invert the image before OCR\n    scroll (tuple[int, int, int, int]): The drag (x1, y1, x2, y2) that scrolls the list\n        by exactly one screen of governors after each batch\n    scroll_duration (float): Seconds the scroll drag takes",
       "properties": {
         "threshold": {
           "title": "Threshold",
@@ -10,20 +11,47 @@
           "title": "Invert",
           "type": "boolean"
         },
-        "script": {
-          "title": "Script",
-          "type": "string"
+        "scroll": {
+          "default": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Scroll",
+          "type": "array"
+        },
+        "scroll_duration": {
+          "default": 0.6,
+          "title": "Scroll Duration",
+          "type": "number"
         }
       },
       "required": [
         "threshold",
-        "invert",
-        "script"
+        "invert"
       ],
       "title": "RankingMisc",
       "type": "object"
     },
     "UIConfig": {
+      "description": "UI configuration for a batch on the ranking screen.\n\nAttributes:\n    name_normal (list[tuple[int, int, int, int]]): The ROI where the name is located normally\n    score_normal (list[tuple[int, int, int, int]]): The ROI where the score is located normally\n    name_last (list[tuple[int, int, int, int]]): The ROI where the name is located when at the end of the rankings\n    score_last (list[tuple[int, int, int, int]]): The ROI where the score is located when at the end of the rankings",
       "properties": {
         "name_normal": {
           "items": {
@@ -128,8 +156,13 @@
       "type": "object"
     }
   },
-  "description": "Per-scanner configuration. Each subclass provides this.",
+  "description": "Config options related to a ranking scan.",
   "properties": {
+    "calibrated": {
+      "default": false,
+      "title": "Calibrated",
+      "type": "boolean"
+    },
     "scan_path": {
       "title": "Scan Path",
       "type": "string"

@@ -276,10 +276,7 @@ def ko_to_options(
     info_values.append(OptionsElement("scan_uuid", "Scan UUID", "---", False))
     info_values.append(OptionsElement("scan_name", "Scan Name", options.scan_name))
     info_values.append(
-        OptionsElement("name", "Bluestacks name", app_config.general.bluestacks.name)
-    )
-    info_values.append(
-        OptionsElement("adb_port", "ADB Port", app_config.general.adb_port)
+        OptionsElement("window_title", "Game window", app_config.general.window_title)
     )
     info_values.append(OptionsElement("amount", "Amount", options.amount))
     info_values.append(OptionsElement("continued", "Continued", options.continued))
@@ -299,9 +296,6 @@ def ko_to_options(
     )
     info_values.append(
         OptionsElement("power_threshold", "Power Threshold", options.power_threshold)
-    )
-    info_values.append(
-        OptionsElement("advanced_scroll", "Advanced Scroll", options.advanced_scroll)
     )
     info_values.append(
         OptionsElement("info_close", "More info wait", app_config.timings.info_close)
@@ -328,10 +322,7 @@ def ro_to_options(
     info_values.append(OptionsElement("scan_uuid", "Scan UUID", "---", False))
     info_values.append(OptionsElement("scan_name", "Scan Name", options.scan_name))
     info_values.append(
-        OptionsElement("name", "Bluestacks name", app_config.general.bluestacks.name)
-    )
-    info_values.append(
-        OptionsElement("adb_port", "ADB Port", app_config.general.adb_port)
+        OptionsElement("window_title", "Game window", app_config.general.window_title)
     )
     info_values.append(OptionsElement("amount", "Amount", options.amount))
     info_values.append(

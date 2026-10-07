@@ -85,6 +85,22 @@ class GovernorDataHandler:
         else:
             return False
 
+    def has_id(self, gov_id: str) -> bool:
+        """Check if a governor with the given id was already recorded.
+
+        Unreadable or skipped ids never count as already recorded.
+
+        Args:
+            gov_id (str): The id as read by the scanner
+
+        Returns:
+            bool: True if the id is already in the collected data
+        """
+        int_id = GovernorData.intify_value(gov_id)
+        if int_id <= 0:
+            return False
+        return any(entry["ID"] == int_id for entry in self.data_list)
+
     def save(self) -> None:
         """Save the collected data to the configured output format(s)."""
         frame = pd.DataFrame(self.data_list)
