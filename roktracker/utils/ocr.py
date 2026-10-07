@@ -88,7 +88,10 @@ def preprocessImage(
 
 
 def advancedProcessing(
-    image: MatLike, scale_factor: int, mode: Literal["white", "dimmed white", "black"]
+    image: MatLike,
+    scale_factor: int,
+    mode: Literal["white", "dimmed white", "black"],
+    border_size: int = 10,
 ) -> MatLike:
     """Preprocesses an image to improve OCR quality.
 
@@ -101,6 +104,8 @@ def advancedProcessing(
         image (MatLike): The image to preprocess
         scale_factor (int): The factor the image is scaled
         mode (Literal['white', 'dimmed white', 'black']): The color of the text to detect
+        border_size (int): White margin added around the result, tight crops read badly
+            without it (Default value = 10)
 
     Returns:
         MatLike: The preprocessed image
@@ -123,6 +128,16 @@ def advancedProcessing(
     mask = cv2.inRange(hsv, lower, upper)
     result = cv2.dilate(mask, kernel, iterations=1)
     result = cv2.bitwise_not(result)  # Need to invert to make text black
+    if border_size > 0:
+        result = cv2.copyMakeBorder(
+            result,
+            top=border_size,
+            bottom=border_size,
+            left=border_size,
+            right=border_size,
+            borderType=cv2.BORDER_CONSTANT,
+            value=[255],
+        )
     return result
 
 

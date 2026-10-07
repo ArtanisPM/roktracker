@@ -35,7 +35,7 @@ from roktracker.ui.utils import (
     update_config_option,
     update_config_options,
 )
-from roktracker.utils.exceptions import AdbError
+from roktracker.utils.exceptions import GameWindowError, NotCalibratedError
 from roktracker.utils.validator import sanitize_scan_name
 
 logger = logging.getLogger(__name__)
@@ -166,13 +166,9 @@ class RankingScannerUI(ttk.Frame):
 
         formats_to_use = self.output_format_options.get()
 
-        update_config_option(
-            self.app_config.general.bluestacks, options.get("info_close")
-        )
-        update_config_option(
-            self.app_config.general.bluestacks, options.get("gov_close")
-        )
-        update_config_option(self.app_config.general, options.get("adb_port"))
+        update_config_option(self.app_config.timings, options.get("info_close"))
+        update_config_option(self.app_config.timings, options.get("gov_close"))
+        update_config_option(self.app_config.general, options.get("window_title"))
 
         try:
             self.stop_button.configure(state="normal", text="End scan")
@@ -207,18 +203,22 @@ class RankingScannerUI(ttk.Frame):
 
             self.ranking_scanner.start_scan(self.selected_options)
 
-        except AdbError as error:
-            logger.error(
-                "An error with the adb connection occurred (probably wrong port). Exact message: "
-                + str(error)
-            )
+        except GameWindowError as error:
+            logger.error("An error with the game window occurred: " + str(error))
 
             show_error(
                 parent=self,
-                message="An error with the adb connection occurred. Please verify that you use the correct port.\nExact message: "
+                message="An error with the game window occurred. Please verify that the game is running (not minimized) and that the window title is correct.\nExact message: "
                 + str(error),
-                title="ADB Error",
+                title="Game Window Error",
             )
+
+            self.state_callback("Not started")
+
+        except NotCalibratedError as error:
+            logger.error(str(error))
+
+            show_error(parent=self, message=str(error), title="Scan not set up")
 
             self.state_callback("Not started")
 

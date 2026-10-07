@@ -2,7 +2,7 @@
 
 ## Summary
 
-Open Source Rise of Kingdoms Stats Management Tool. Track TOP X players in kingdom / alliance / honor leaderboard. Depending on what you scan the resulting spreadsheet will look different:
+Open Source Rise of Kingdoms Stats Management Tool for the **PC client** (the scanner reads the game window and clicks with the mouse, no emulator or ADB needed). Track TOP X players in kingdom / alliance / honor leaderboard. Depending on what you scan the resulting spreadsheet will look different:
 
 **Kingdom rankings:** Governor ID, Governor Name, Power, Kill Points, Ranged Points, T1-T5 Kills, Total Kills, T4+T5 Kills, Dead Troops, RSS Gathered, RSS Assistance, Helps and Alliance name.
 
@@ -44,25 +44,13 @@ There are two ways of using the scanner:
 
 ---
 
-## Simple Installation
+## Installation
 
-Download the latest [RoK Tracker.zip release](https://github.com/Cyrexxis/RokTracker/releases/latest). Extract it and:
+**Prerequisites:** Rise of Kingdoms PC client, Python 3.14+ ([download](https://www.python.org/downloads/)) or uv ([instructions](https://docs.astral.sh/uv/)), [tessdata](https://github.com/tesseract-ocr/tessdata). On Windows, [Build Tools for C++](https://visualstudio.microsoft.com/de/visual-cpp-build-tools/) may be required.
 
-1. Download [tessdata (trained data)](https://github.com/tesseract-ocr/tessdata) → place into `deps/tessdata/`
-2. Download [ADB Platform Tools](https://dl.google.com/android/repository/platform-tools_r31.0.3-windows.zip) → place into `deps/platform-tools/`
-3. Configure Bluestacks 5 (resolution 1600x900, DPI 450, ADB enabled) — [see below](#bluestacks-5-settings)
-4. Adjust default options in the [config files](#config-files)
-5. Double-click the `.exe` to run
-
----
-
-## Advanced Installation
-
-**Prerequisites:** Bluestacks 5, Python 3.14+ ([download](https://www.python.org/downloads/)) or uv ([instructions](https://docs.astral.sh/uv/)), [tessdata](https://github.com/tesseract-ocr/tessdata), [ADB Platform Tools](https://dl.google.com/android/repository/platform-tools_r31.0.3-windows.zip). On Windows, [Build Tools for C++](https://visualstudio.microsoft.com/de/visual-cpp-build-tools/) may be required. Here is how to set it up with uv:
-
-1. Download the [source code release](https://github.com/Cyrexxis/RokTracker/releases/latest)
-2. Place tessdata and platform-tools into the `deps/` folder (see [Folder Structure](#folder-structure))
-3. Configure Bluestacks 5 — [see below](#bluestacks-5-settings)
+1. Place tessdata into `deps/tessdata/` (see [Folder Structure](#folder-structure))
+2. Place the two copy-name icon pictures `copy_icon.png` and `copy_icon_white.png` into `assets/`
+3. Set up the game window — [see below](#game-window-setup)
 4. Install dependencies: `uv sync`
 5. Run the scanner:
    - `uv run scanner_console.py` — CLI (select scan type interactively)
@@ -76,7 +64,7 @@ The `config/` folder contains these files:
 
 | File | Purpose |
 |------|---------|
-| `config.json` | Global settings (Bluestacks instance name, ADB port, log paths) |
+| `config.json` | Global settings (game window title, click offset, wait timings) |
 | `kingdom_defaults.json` | Default options for kingdom scans |
 | `seed_defaults.json` | Default options for seed (quick) scans |
 | `alliance_defaults.json` | Default options for alliance ranking scans |
@@ -87,12 +75,14 @@ The `config/` folder contains these files:
 
 ## Folder Structure
 
-Only two directories need manual attention:
+Only these directories need manual attention:
 
 ```
 deps/
-├── tessdata/
-└── platform-tools/
+└── tessdata/
+assets/
+├── copy_icon.png
+└── copy_icon_white.png
 ```
 
 Everything else (`config/`, `_internal/`, source scripts) is either downloaded from the release or generated automatically. Scan results go into `scans_kingdom/`, `scans_alliance/`, `scans_honor/`, `scans_seed/`. Intermediate screenshots go into `temp_images/`.
@@ -118,22 +108,20 @@ Everything else (`config/`, `_internal/`, source scripts) is either downloaded f
 
 ---
 
-## Bluestacks 5 Settings
+## Game Window Setup
 
-### Main Configuration
+- Run the game in **windowed mode** and keep the whole window visible on screen (not minimized, not covered by other windows) while scanning — the scanner takes screenshots of the screen area of the game.
+- Use a **16:9 client area** (e.g. 1600x900). Every position in `config/internal/*.json` is written for 1600x900; other 16:9 sizes are scaled automatically. A different aspect ratio misaligns everything and is logged as a warning.
+- The window title defaults to `Rise of Kingdoms` (partial matches work). Change it in the app or in `config/config.json` (`general.window_title`).
+- If clicks/screenshots are consistently shifted vertically, set `general.y_offset` (in 1600x900 pixels) in `config/config.json`.
+- **Press F10 at any time to abort a running scan immediately** — the mouse is controlled by the scanner, so this is the quickest way out. The "End scan" button finishes the current governor first.
+- Don't touch the mouse while a scan runs.
 
-- **Display tab:** Resolution 1600x900, DPI Custom (450) ([screenshot](images/bluestacks-display.png))
-- **Advanced tab:** Android Debug Bridge — Enabled ([screenshot](images/bluestacks-advanced.png))
+### Checking positions
 
-### ADB Configuration
+`uv run calibrate.py` takes a screenshot of the open game screen and saves it (plus a copy with every configured region, click position and list row drawn on it) into `calibration/`. Open a governor profile, the kill statistics popup or the More Info page, run it, and check that each green box sits on its text. Use `--config alliance|honor|seed` for the ranking scans.
 
-By default, the scanner assumes ADB port 5555. To configure automatic port detection:
-
-1. Set `bluestacks_config` in `config/config.json` to your Bluestacks config file location (usually `C:\ProgramData\Bluestacks_nxt\bluestacks.conf`)
-2. Make sure the instance name in `config.json` matches your Bluestacks instance name — the scanner asks for it interactively
-3. The scanner auto-detects the ADB port from the config file. If no `bluestacks.conf` exists, your instance likely always uses port 5555
-
-Not every Bluestacks variant has a config, that is not a limitation of the scanner but the installed android or Bluestacks versions. However, in those cases it is very likely that the port 5555 is used.
+Regions set to `0, 0, 0, 0` in `config/internal/kingdom.json` have not been measured for the PC client: that stat is skipped (and its column left out of the output) until you fill in a region. Currently that is `gathered` and the per tier killpoints (needed only to *reconstruct* wrong kills). The Alliance, Honor and Seed ranking configs have `"calibrated": false` and refuse to start until their positions and scroll drag are measured and the flag is set to `true`.
 
 ---
 
@@ -142,17 +130,16 @@ Not every Bluestacks variant has a config, that is not a limitation of the scann
 ### Scan Preparation
 
 - Your active character must be in **Home Kingdom** to scan only your kingdom (otherwise KvK players from other kingdoms are included)
-- Start the scanner from the **top** of the relevant ranking page — don't scroll during the scan
+- Start the scanner from the **top** of the relevant ranking page with the game window visible — don't scroll during the scan
 - **Kingdom scan only:** Your rank must be lower than the number of players you want to scan (e.g., can't scan top 100 if you're ranked 85). Use an alt account
 - **Kingdom scan only:** "Resume scan" starts from the governor currently visible on screen (the 4th one down)
 - Game Language must be **English** — other languages break inactive governor detection
 - Chinese characters may not render in CMD but are visible in the final export file
-- You can do other things on your PC while scanning, but avoid copying text since the scanner uses the clipboard to read names
+- The scanner uses your mouse and clipboard (to read names), so don't use the PC for anything else while it runs
 - **Important:** Always copy the scan `.xlsx` file when finished — on the next scan there is a (small) chance it gets overwritten
 
 ### Configuration
 
-- Always use `\\` or forward slashes `/` in the Bluestacks path fields in config files (raw `\` will cause a `JSONDecodeError`)
 
 ## Getting Help
 

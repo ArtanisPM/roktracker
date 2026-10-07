@@ -101,7 +101,8 @@ def more_info_present(ocr_text: str) -> bool:
     Returns:
         bool: True if more info is found, False otherwise
     """
-    return "MoreInfo" in ocr_text or "Moren" in ocr_text
+    text = ocr_text.replace(" ", "").lower()
+    return "moreinfo" in text or "moren" in text or "more" in text
 
 
 def generate_random_id(length: int) -> str:

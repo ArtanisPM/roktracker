@@ -1,5 +1,7 @@
 {
   "$schema": "../schemas/ranking_scanner_schema.json",
+  "_note": "BlueStacks positions kept below as a starting point. They were NOT measured for the PC client yet: measure the name/score regions and the scroll drag with calibrate.py, then set calibrated to true.",
+  "calibrated": false,
   "scan_path": "scans_seed",
   "filename_prefix": "Seed",
   "govs_per_screen": 6,
@@ -7,7 +9,7 @@
   "misc": {
     "threshold": 90,
     "invert": true,
-    "script": "alliance_6_person_scroll.txt"
+    "scroll": [0, 0, 0, 0]
   },
   "ui_config": {
     "name_normal": [

@@ -7,14 +7,13 @@
     "info_open": 1,
     "info_close": 0.5,
     "gov_close": 1,
+    "popup_dismiss": 0.5,
+    "list_swipe": 1,
+    "end_of_list": 2,
     "max_random": 0.5
   },
   "general": {
-    "emulator": "bluestacks",
-    "bluestacks": {
-      "name": "RoK Tracker",
-      "config": "C:\\ProgramData\\BlueStacks_nxt\\bluestacks.conf"
-    },
-    "adb_port": 5555
+    "window_title": "Rise of Kingdoms",
+    "y_offset": 0
   }
 }

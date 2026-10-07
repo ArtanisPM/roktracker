@@ -17,10 +17,9 @@ from roktracker.ranking.batch_printer import print_batch
 from roktracker.ranking.config import RankingConfig
 from roktracker.ranking.options import RankingScanOptions
 from roktracker.ranking.scanner import RankingScanner
-from roktracker.utils.adb import get_bluestacks_port
 from roktracker.utils.console import console
 from roktracker.utils.exception_handling import ConsoleExceptionHandler
-from roktracker.utils.exceptions import AdbError
+from roktracker.utils.exceptions import GameWindowError, NotCalibratedError
 from roktracker.utils.general import is_string_float, is_string_int
 from roktracker.utils.ocr import get_supported_langs
 from roktracker.utils.validator import sanitize_scan_name, validate_installation
@@ -63,18 +62,10 @@ def run_kingdom_scan(config: AppConfig):
     options = default_options
 
     try:
-        config.general.bluestacks.name = questionary.text(
-            message="Name of your bluestacks instance:",
-            default=config.general.bluestacks.name,
+        config.general.window_title = questionary.text(
+            message="Title of the game window:",
+            default=config.general.window_title,
         ).unsafe_ask()
-
-        config.general.adb_port = int(
-            questionary.text(
-                f"Adb port of device (detected {get_bluestacks_port(config)}):",
-                default=str(get_bluestacks_port(config)),
-                validate=is_string_int,
-            ).unsafe_ask()
-        )
 
         options.scan_name = questionary.text(
             message="Kingdom name (used for file name):",
@@ -103,12 +94,6 @@ def run_kingdom_scan(config: AppConfig):
             message="Resume scan:",
             auto_enter=False,
             default=default_options.continued,
-        ).unsafe_ask()
-
-        options.advanced_scroll = questionary.confirm(
-            message="Use advanced scrolling method:",
-            auto_enter=False,
-            default=default_options.advanced_scroll,
         ).unsafe_ask()
 
         options.track_inactives = questionary.confirm(
@@ -284,18 +269,19 @@ def run_kingdom_scan(config: AppConfig):
             highlight=False,
         )
 
+        console.print("Press [bold]F10[/bold] at any time to abort the scan immediately.")
         signal.signal(signal.SIGINT, lambda _, __: ask_abort(kingdom_scanner))
 
         kingdom_scanner.start_scan(options)
-    except AdbError as error:
-        logger.error(
-            "An error with the adb connection occurred (probably wrong port). Exact message: "
-            + str(error)
-        )
+    except GameWindowError as error:
+        logger.error("An error with the game window occurred: " + str(error))
         console.print(
-            "An error with the adb connection occurred. Please verify that you use the correct port.\nExact message: "
+            "An error with the game window occurred. Please verify that the game is running (not minimized) and the window title is correct.\nExact message: "
             + str(error)
         )
+    except NotCalibratedError as error:
+        logger.error(str(error))
+        console.print(str(error))
 
 
 def run_ranking_scan(
@@ -309,18 +295,10 @@ def run_ranking_scan(
     options = RankingScanOptions()
 
     try:
-        config.general.bluestacks.name = questionary.text(
-            message="Name of your bluestacks instance:",
-            default=config.general.bluestacks.name,
+        config.general.window_title = questionary.text(
+            message="Title of the game window:",
+            default=config.general.window_title,
         ).unsafe_ask()
-
-        config.general.adb_port = int(
-            questionary.text(
-                f"Adb port of device (detected {get_bluestacks_port(config)}):",
-                default=str(get_bluestacks_port(config)),
-                validate=is_string_int,
-            ).unsafe_ask()
-        )
 
         options.scan_name = questionary.text(
             message="Scan name:",
@@ -390,18 +368,19 @@ def run_ranking_scan(
             f"The UUID of this scan is [green]{scanner.run_id}[/green]",
             highlight=False,
         )
+        console.print("Press [bold]F10[/bold] at any time to abort the scan immediately.")
         signal.signal(signal.SIGINT, lambda _, __: ask_abort(scanner))
 
         scanner.start_scan(options)
-    except AdbError as error:
-        logger.error(
-            "An error with the adb connection occurred (probably wrong port). Exact message: "
-            + str(error)
-        )
+    except GameWindowError as error:
+        logger.error("An error with the game window occurred: " + str(error))
         console.print(
-            "An error with the adb connection occurred. Please verify that you use the correct port.\nExact message: "
+            "An error with the game window occurred. Please verify that the game is running (not minimized) and the window title is correct.\nExact message: "
             + str(error)
         )
+    except NotCalibratedError as error:
+        logger.error(str(error))
+        console.print(str(error))
 
 
 def main():

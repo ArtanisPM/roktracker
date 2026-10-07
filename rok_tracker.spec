@@ -3,7 +3,7 @@ from PyInstaller.utils.hooks import copy_metadata
 
 ttk.__path__[0].replace("\\", "/")
 
-hidden_imports = ['tesserocr.cysignals', 'ttkbootstrap']
+hidden_imports = ['tesserocr.cysignals', 'ttkbootstrap', 'pynput.keyboard._win32', 'pynput.mouse._win32']
 
 added_metadata = []
 

@@ -1,5 +1,7 @@
 {
   "$schema": "../schemas/ranking_scanner_schema.json",
+  "_note": "BlueStacks positions kept below as a starting point. They were NOT measured for the PC client yet: measure the name/score regions and the scroll drag with calibrate.py, then set calibrated to true.",
+  "calibrated": false,
   "scan_path": "scans_honor",
   "filename_prefix": "Honor",
   "govs_per_screen": 5,
@@ -7,7 +9,7 @@
   "misc": {
     "threshold": 150,
     "invert": false,
-    "script": "honor_5_person_scroll.txt"
+    "scroll": [0, 0, 0, 0]
   },
   "ui_config": {
     "name_normal": [

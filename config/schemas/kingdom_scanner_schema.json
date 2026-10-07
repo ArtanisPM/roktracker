@@ -1,6 +1,73 @@
 {
   "$defs": {
+    "KingdomListLayout": {
+      "description": "Where the governors are on the individual power/killpoints ranking list.",
+      "properties": {
+        "tap_x": {
+          "title": "Tap X",
+          "type": "integer"
+        },
+        "rows_y": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Rows Y",
+          "type": "array"
+        },
+        "end_taps": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "End Taps",
+          "type": "array"
+        },
+        "swipe_next": {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Swipe Next",
+          "type": "array"
+        },
+        "row_height": {
+          "default": 70,
+          "title": "Row Height",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "tap_x",
+        "rows_y",
+        "end_taps",
+        "swipe_next"
+      ],
+      "title": "KingdomListLayout",
+      "type": "object"
+    },
     "KingdomTapPositions": {
+      "description": "Tap coordinates for navigating the governor screens.",
       "properties": {
         "name": {
           "default": [
@@ -36,6 +103,24 @@
             }
           ],
           "title": "Kills",
+          "type": "array"
+        },
+        "dismiss_popup": {
+          "default": [
+            0,
+            0
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Dismiss Popup",
           "type": "array"
         },
         "info": {
@@ -97,6 +182,7 @@
       "type": "object"
     },
     "KingdomUIRegions": {
+      "description": "OCR region coordinates for extracting governor data from screen sections.",
       "properties": {
         "more_info": {
           "default": [
@@ -122,6 +208,32 @@
             }
           ],
           "title": "More Info",
+          "type": "array"
+        },
+        "name_search": {
+          "default": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Name Search",
           "type": "array"
         },
         "id": {
@@ -675,8 +787,18 @@
       "type": "object"
     },
     "UIConfig": {
+      "description": "UI configuration for a governor profile.",
       "properties": {
+        "list_layout": {
+          "$ref": "#/$defs/KingdomListLayout"
+        },
         "profile_version": {
+          "default": [
+            0,
+            0,
+            0,
+            0
+          ],
           "maxItems": 4,
           "minItems": 4,
           "prefixItems": [
@@ -703,24 +825,38 @@
           "$ref": "#/$defs/KingdomTapPositions"
         },
         "regions_pre_acclaim": {
-          "$ref": "#/$defs/KingdomUIRegions"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/KingdomUIRegions"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "taps_pre_acclaim": {
-          "$ref": "#/$defs/KingdomTapPositions"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/KingdomTapPositions"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
-        "profile_version",
+        "list_layout",
         "regions",
-        "taps",
-        "regions_pre_acclaim",
-        "taps_pre_acclaim"
+        "taps"
       ],
       "title": "UIConfig",
       "type": "object"
     }
   },
-  "description": "Kingdom scanner configuration. Each subclass provides this.",
+  "description": "Config options related to a kingdom scan.",
   "properties": {
     "scan_path": {
       "title": "Scan Path",

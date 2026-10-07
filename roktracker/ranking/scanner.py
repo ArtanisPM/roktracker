@@ -3,7 +3,7 @@
 Exports the RankingScanner class which scans all visible
 governors on screen, scrolls to subsequent batches, saves
 state after each batch, and manages callbacks for batch
-progress and output."""
+progress and output. It drives the PC version of the game."""
 
 import datetime
 import math
@@ -25,11 +25,11 @@ from roktracker.ranking.config import RankingConfig
 from roktracker.ranking.options import RankingScanOptions
 from roktracker.ranking.ranking_data import RankingData
 from roktracker.ranking.ranking_data_handler import RankingDataHandler
-from roktracker.utils.adb import AdvancedAdbClient
+from roktracker.utils.exceptions import NotCalibratedError, ScanAborted
+from roktracker.utils.game_window import GameWindowClient
 from roktracker.utils.general import (
     generate_random_id,
     load_cv2_img,
-    wait_random_range,
     write_cv2_img,
 )
 
@@ -75,13 +75,10 @@ class RankingScanner:
         self.state_callback: Callable[[str], None] = lambda m: None
         self.output_handler: Callable[[str], None] = lambda m: None
 
-        adb_path = str(self.root_dir / "deps" / "platform-tools" / "adb.exe")
-
-        self.adb_client = AdvancedAdbClient(
-            adb_path,
-            config.general.adb_port,
-            config.general.emulator,
-            self.root_dir / "deps" / "inputs",
+        self.client = GameWindowClient(
+            config.general.window_title,
+            y_offset=config.general.y_offset,
+            max_random=config.timings.max_random,
         )
 
     # -- Callback setters (identical, no override needed) --
@@ -185,7 +182,7 @@ class RankingScanner:
         Returns:
             List[RankingData]: A list of RankingData for all governors on the screen
         """
-        self.adb_client.secure_adb_screencap().save(self.img_path / "currentState.png")
+        self.client.screencap().save(self.img_path / "currentState.png")
         image = load_cv2_img(self.img_path / "currentState.png", cv2.IMREAD_UNCHANGED)
 
         # Detect last screen by checking if first score is empty
@@ -232,7 +229,8 @@ class RankingScanner:
 
     def _scroll_action(self) -> None:
         """Perform the scroll after processing a screen."""
-        self.adb_client.adb_send_events("Touch", self.cfg.misc.script)
+        x1, y1, x2, y2 = self.cfg.misc.scroll
+        self.client.swipe(x1, y1, x2, y2, duration=self.cfg.misc.scroll_duration)
 
     def _make_filename(self, amount: int, scan_name: str) -> str:
         """Processes the filename for the scan.
@@ -250,13 +248,39 @@ class RankingScanner:
     def start_scan(self, options: RankingScanOptions):
         """Start a ranking scan.
 
-        It is expected that the user has a ranking screen like alliance helps, honor or kingdom individual power open.
+        It is expected that the user has a ranking screen like alliance helps, honor or kingdom individual power
+        open in the game window.
+
+        Args:
+            options (RankingScanOptions): Scan options to use
+
+        Raises:
+            NotCalibratedError: If the positions of this ranking were not measured for the PC client yet
+            GameWindowError: If the game window can't be found or got closed
+        """
+        if not self.cfg.calibrated or not any(self.cfg.misc.scroll):
+            raise NotCalibratedError(
+                f"The {self.cfg.filename_prefix} scan is not set up for the PC client yet: "
+                "its screen positions and scroll drag have not been measured. "
+                f"Fill them in config/internal/{self.cfg.filename_prefix.lower()}.json "
+                'and set "calibrated" to true. Run calibrate.py to check the positions.'
+            )
+
+        self.state_callback("Initializing")
+        self.client.start()
+        try:
+            self._run_scan(options)
+        finally:
+            self.client.stop()
+            for p in self.img_path.glob("gov_name*.png"):
+                p.unlink()
+
+    def _run_scan(self, options: RankingScanOptions) -> None:
+        """The actual scan loop, see start_scan.
 
         Args:
             options (RankingScanOptions): Scan options to use
         """
-        self.state_callback("Initializing")
-        self.adb_client.start_adb()
         self.screens_needed = int(math.ceil(options.amount / self.govs_per_screen))
 
         filename = self._make_filename(options.amount, options.scan_name)
@@ -270,7 +294,13 @@ class RankingScanner:
                 break
 
             start_time = time.time()
-            governors = self._scan_screen(i)
+            try:
+                governors = self._scan_screen(i)
+            except ScanAborted as e:
+                self.output_handler(str(e))
+                data_handler.save()
+                self.state_callback("Scan aborted")
+                return
             end_time = time.time()
             self.scan_times.append(end_time - start_time)
 
@@ -287,15 +317,23 @@ class RankingScanner:
             data_handler.save()
 
             if not self.reached_bottom:
-                self._scroll_action()
-                wait_random_range(1, self.max_random_delay)
+                try:
+                    self._scroll_action()
+                    self.client.wait(1, self.max_random_delay)
+                except ScanAborted as e:
+                    self.output_handler(str(e))
+                    data_handler.save()
+                    self.state_callback("Scan aborted")
+                    return
 
         data_handler.save()
-        self.adb_client.kill_adb()
-        for p in self.img_path.glob("gov_name*.png"):
-            p.unlink()
         self.state_callback("Scan finished")
 
     def end_scan(self) -> None:
         """Ends the scan after the current batch."""
         self.stop_scan = True
+
+    def abort_scan(self) -> None:
+        """Aborts the scan immediately, without waiting for the current batch."""
+        self.stop_scan = True
+        self.client.abort()

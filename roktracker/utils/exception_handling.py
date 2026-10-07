@@ -5,10 +5,6 @@ import sys
 from threading import ExceptHookArgs
 from types import TracebackType
 
-from com.dtmilano.android.adb.adbclient import (  # type: ignore no stub file is provided
-    Timer,
-)
-
 from roktracker.utils.console import console
 
 
@@ -38,11 +34,6 @@ class ConsoleExceptionHandler:
         """
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
-
-        # needed because of how adb library is implemented...
-        if issubclass(exc_type, Timer.TimeoutException):
-            # no sys excepthook to prevent error shown in the console
             return
 
         self.logger.critical(
@@ -92,10 +83,6 @@ class GuiExceptionHandler:
         """
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
-
-        # needed because of how adb library is implemented...
-        if issubclass(exc_type, Timer.TimeoutException):
             return
 
         self.logger.critical(
