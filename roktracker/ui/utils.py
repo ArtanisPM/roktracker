@@ -1,9 +1,8 @@
 """Shared utility functions for UI components.
 
 Provides converters between scanner data and GUI data models
-(additional_data_to_info, governor_to_info, batch_to_info,
-sts_to_checkbox, formats_to_checkbox, ko_to_options,
-ro_to_options). Also includes config update helpers
+(additional_data_to_info, governor_to_info,
+sts_to_checkbox, formats_to_checkbox, ko_to_options). Also includes config update helpers
 (update_config_option, update_config_options) and dialog
 helpers (show_error, show_confirm, show_dialog)."""
 
@@ -18,8 +17,6 @@ from roktracker.common.data import AdditionalScanData
 from roktracker.common.output_formats import OutputFormats
 from roktracker.kingdom.governor_data import AdditionalGovernorData, GovernorData
 from roktracker.kingdom.options import KingdomScanOptions, StatsToScan
-from roktracker.ranking.options import RankingScanOptions
-from roktracker.ranking.ranking_data import RankingData
 from roktracker.ui.checkbox_frames import CheckboxGroupValue
 from roktracker.ui.options_frame import OptionsElement
 from roktracker.ui.status_frame import AdditionalInfoData, InfoValue
@@ -154,28 +151,6 @@ def additional_batch_data_to_info(data: AdditionalScanData) -> AdditionalInfoDat
     )
 
 
-def batch_to_info(batch: list[RankingData]) -> list[InfoValue]:
-    """Utility to convert a list of RankingData to a list of InfoValues.
-
-    Args:
-        batch (list[RankingData]): The list of RankingData
-
-    Returns:
-        list[InfoValue]: The list of InfoValues
-    """
-    info_values: list[InfoValue] = []
-    for index, governor in enumerate(batch):
-        info_values.append(
-            InfoValue(f"governor_{index}", governor.name, governor.score)
-        )
-
-    if len(batch) < 6:
-        for missing in range(len(batch), 6 + 1):
-            info_values.append(InfoValue(f"governor-{missing}", "", ""))
-
-    return info_values
-
-
 def sts_to_checkbox(stats: StatsToScan) -> list[CheckboxGroupValue]:
     """Converts StatsToScan to a list of CheckboxGroupValue.
 
@@ -276,10 +251,7 @@ def ko_to_options(
     info_values.append(OptionsElement("scan_uuid", "Scan UUID", "---", False))
     info_values.append(OptionsElement("scan_name", "Scan Name", options.scan_name))
     info_values.append(
-        OptionsElement("name", "Bluestacks name", app_config.general.bluestacks.name)
-    )
-    info_values.append(
-        OptionsElement("adb_port", "ADB Port", app_config.general.adb_port)
+        OptionsElement("window_title", "Game window", app_config.general.window_title)
     )
     info_values.append(OptionsElement("amount", "Amount", options.amount))
     info_values.append(OptionsElement("continued", "Continued", options.continued))
@@ -300,40 +272,6 @@ def ko_to_options(
     info_values.append(
         OptionsElement("power_threshold", "Power Threshold", options.power_threshold)
     )
-    info_values.append(
-        OptionsElement("advanced_scroll", "Advanced Scroll", options.advanced_scroll)
-    )
-    info_values.append(
-        OptionsElement("info_close", "More info wait", app_config.timings.info_close)
-    )
-    info_values.append(
-        OptionsElement("gov_close", "Governor wait", app_config.timings.gov_close)
-    )
-    return info_values
-
-
-def ro_to_options(
-    app_config: AppConfig, options: RankingScanOptions
-) -> list[OptionsElement]:
-    """Converts the AppConfig and the RankingScanOptions to a list of OptionElements.
-
-    Args:
-        app_config (AppConfig): The AppConfig to use
-        options (RankingScanOptions): The RankingScanOptions to use
-
-    Returns:
-        list[OptionsElement]: The list of OptionElements
-    """
-    info_values: list[OptionsElement] = []
-    info_values.append(OptionsElement("scan_uuid", "Scan UUID", "---", False))
-    info_values.append(OptionsElement("scan_name", "Scan Name", options.scan_name))
-    info_values.append(
-        OptionsElement("name", "Bluestacks name", app_config.general.bluestacks.name)
-    )
-    info_values.append(
-        OptionsElement("adb_port", "ADB Port", app_config.general.adb_port)
-    )
-    info_values.append(OptionsElement("amount", "Amount", options.amount))
     info_values.append(
         OptionsElement("info_close", "More info wait", app_config.timings.info_close)
     )

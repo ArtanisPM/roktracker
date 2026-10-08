@@ -1,11 +1,11 @@
 """Global configuration and settings for the rok tracker application.
 
 Defines the AppConfig and related configuration models loaded
-from config.json, with default values for emulator type, ADB
-port, and Bluestacks paths."""
+from config.json, with default values for the game window title
+and scan timings."""
 
 from pathlib import Path
-from typing import Literal, override
+from typing import override
 
 from pydantic import BaseModel
 from pydantic_settings import (
@@ -19,7 +19,7 @@ from dummy_root import get_app_root
 
 
 class ScanTimings(BaseModel):
-    """Waiting timings between ADB actions during kingdom scanning."""
+    """Waiting timings between actions during kingdom scanning."""
 
     gov_open: float = 2.0
     copy_wait: float = 0.2
@@ -27,22 +27,15 @@ class ScanTimings(BaseModel):
     info_open: float = 1.0
     info_close: float = 0.5
     gov_close: float = 1.0
+    popup_dismiss: float = 0.5
     max_random: float = 0.5
 
 
-class BluestacksConfig(BaseModel):
-    """Configuration specific to the Bluestacks emulator."""
-
-    name: str = "RoK Tracker"
-    config: str = str(Path("C:/ProgramData/Bluestacks_nxt/bluestacks.conf"))
-
-
 class GeneralConfig(BaseModel):
-    """General application settings (emulator type, ADB port, etc.)."""
+    """General application settings (game window title)."""
 
-    emulator: Literal["bluestacks", "ld"] = "bluestacks"
-    adb_port: int = 5555
-    bluestacks: BluestacksConfig = BluestacksConfig()
+    window_title: str = "Rise of Kingdoms"
+    """Title (or part of it) of the game window."""
 
 
 class AppConfig(BaseSettings):

@@ -1,6 +1,7 @@
 {
   "$defs": {
     "OutputFormats": {
+      "description": "Configurable set of output formats for scan results.",
       "properties": {
         "xlsx": {
           "default": true,
@@ -22,6 +23,7 @@
       "type": "object"
     },
     "StatsToScan": {
+      "description": "Which stats to include during a kingdom scan.",
       "properties": {
         "id": {
           "default": true,
@@ -113,6 +115,7 @@
       "type": "object"
     }
   },
+  "description": "Configuration options for a kingdom scan.",
   "properties": {
     "scan_name": {
       "default": "",
@@ -175,11 +178,6 @@
       "default": 100000,
       "title": "Power Threshold",
       "type": "integer"
-    },
-    "advanced_scroll": {
-      "default": true,
-      "title": "Advanced Scroll",
-      "type": "boolean"
     },
     "formats": {
       "$ref": "#/$defs/OutputFormats",

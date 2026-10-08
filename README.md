@@ -2,11 +2,9 @@
 
 ## Summary
 
-Open Source Rise of Kingdoms Stats Management Tool. Track TOP X players in kingdom / alliance / honor leaderboard. Depending on what you scan the resulting spreadsheet will look different:
+Open Source Rise of Kingdoms Stats Management Tool for the **PC client** (the scanner reads the game window and clicks with the mouse, no emulator needed). Track TOP X players in the kingdom leaderboard.
 
 **Kingdom rankings:** Governor ID, Governor Name, Power, Kill Points, Ranged Points, T1-T5 Kills, Total Kills, T4+T5 Kills, Dead Troops, RSS Gathered, RSS Assistance, Helps and Alliance name.
-
-**Honor, alliance and seed rankings:** Governor name and score only. Because the game doesn't guarantee name accuracy, a screenshot of the name is saved in addition.
 
 This is a heavily modified version of the original tool from [nikolakis1919](https://github.com/nikolakis1919/RokTracker).
 
@@ -17,7 +15,7 @@ There are two ways of using the scanner:
 ## Breaking Changes (v6)
 
 - **Config restructured:** The single `config.json` has been replaced with a `config/` folder containing multiple files for global settings, scanner presets, and GUI config. Version 5 configs are not compatible.
-- **Unified scanner:** The individual `kingdom_scanner`, `alliance_scanner`, `honor_scanner`, and `seed_scanner` entry points have been merged into a single `scanner_console.py` and `scanner_ui.py`. The CLI presents an interactive menu to select the scan type.
+- **Unified scanner:** The individual scanner entry points have been merged into a single `scanner_console.py` and `scanner_ui.py`.
 
 ## Latest Changes
 
@@ -44,29 +42,16 @@ There are two ways of using the scanner:
 
 ---
 
-## Simple Installation
+## Installation
 
-Download the latest [RoK Tracker.zip release](https://github.com/Cyrexxis/RokTracker/releases/latest). Extract it and:
+**Prerequisites:** Rise of Kingdoms PC client, Python 3.14+ ([download](https://www.python.org/downloads/)) or uv ([instructions](https://docs.astral.sh/uv/)), [tessdata](https://github.com/tesseract-ocr/tessdata). On Windows, [Build Tools for C++](https://visualstudio.microsoft.com/de/visual-cpp-build-tools/) may be required. Here is how to set it up with uv:
 
-1. Download [tessdata (trained data)](https://github.com/tesseract-ocr/tessdata) → place into `deps/tessdata/`
-2. Download [ADB Platform Tools](https://dl.google.com/android/repository/platform-tools_r31.0.3-windows.zip) → place into `deps/platform-tools/`
-3. Configure Bluestacks 5 (resolution 1600x900, DPI 450, ADB enabled) — [see below](#bluestacks-5-settings)
-4. Adjust default options in the [config files](#config-files)
-5. Double-click the `.exe` to run
-
----
-
-## Advanced Installation
-
-**Prerequisites:** Bluestacks 5, Python 3.14+ ([download](https://www.python.org/downloads/)) or uv ([instructions](https://docs.astral.sh/uv/)), [tessdata](https://github.com/tesseract-ocr/tessdata), [ADB Platform Tools](https://dl.google.com/android/repository/platform-tools_r31.0.3-windows.zip). On Windows, [Build Tools for C++](https://visualstudio.microsoft.com/de/visual-cpp-build-tools/) may be required. Here is how to set it up with uv:
-
-1. Download the [source code release](https://github.com/Cyrexxis/RokTracker/releases/latest)
-2. Place tessdata and platform-tools into the `deps/` folder (see [Folder Structure](#folder-structure))
-3. Configure Bluestacks 5 — [see below](#bluestacks-5-settings)
-4. Install dependencies: `uv sync`
-5. Run the scanner:
-   - `uv run scanner_console.py` — CLI (select scan type interactively)
-   - `uv run scanner_ui.py` — GUI (tabs for Kingdom and Rankings)
+1. Place tessdata into `deps/tessdata/` and the two copy-name icon pictures `copy_icon.png` and `copy_icon_white.png` into `assets/` (see [Folder Structure](#folder-structure))
+2. Set up the game window — [see below](#game-window-setup)
+3. Install dependencies: `uv sync`
+4. Run the scanner:
+   - `uv run scanner_console.py` — CLI
+   - `uv run scanner_ui.py` — GUI
 
 ---
 
@@ -76,26 +61,25 @@ The `config/` folder contains these files:
 
 | File | Purpose |
 |------|---------|
-| `config.json` | Global settings (Bluestacks instance name, ADB port, log paths) |
+| `config.json` | Global settings (game window title, wait timings) |
 | `kingdom_defaults.json` | Default options for kingdom scans |
-| `seed_defaults.json` | Default options for seed (quick) scans |
-| `alliance_defaults.json` | Default options for alliance ranking scans |
-| `honor_defaults.json` | Default options for honor ranking scans |
 | `gui_config.json` | GUI settings (default theme) |
 
 ---
 
 ## Folder Structure
 
-Only two directories need manual attention:
+Only these directories need manual attention:
 
 ```
 deps/
-├── tessdata/
-└── platform-tools/
+└── tessdata/
+assets/
+├── copy_icon.png
+└── copy_icon_white.png
 ```
 
-Everything else (`config/`, `_internal/`, source scripts) is either downloaded from the release or generated automatically. Scan results go into `scans_kingdom/`, `scans_alliance/`, `scans_honor/`, `scans_seed/`. Intermediate screenshots go into `temp_images/`.
+Everything else (`config/`, `_internal/`, source scripts) is either downloaded from the release or generated automatically. Scan results go into `scans_kingdom/`. Intermediate screenshots go into `temp_images/`.
 
 ---
 
@@ -109,31 +93,14 @@ Everything else (`config/`, `_internal/`, source scripts) is either downloaded f
 - Inactive account detection: accounts that can't be clicked are skipped automatically; screenshots can optionally be saved to `inactives/`
 - Stats to scan can be selected (if only stats from 1st page are use 2nd and 3rd page will get skipped to make the scan faster)
 
-### Ranking Scanner
-
-- Full alliance ranking scan
-- Full personal honor ranking scan
-- Seed scan (from kingdom rankings)
-- Names are approximate (game limitation); governor ID is not tracked
-
 ---
 
-## Bluestacks 5 Settings
+## Game Window Setup
 
-### Main Configuration
-
-- **Display tab:** Resolution 1600x900, DPI Custom (450) ([screenshot](images/bluestacks-display.png))
-- **Advanced tab:** Android Debug Bridge — Enabled ([screenshot](images/bluestacks-advanced.png))
-
-### ADB Configuration
-
-By default, the scanner assumes ADB port 5555. To configure automatic port detection:
-
-1. Set `bluestacks_config` in `config/config.json` to your Bluestacks config file location (usually `C:\ProgramData\Bluestacks_nxt\bluestacks.conf`)
-2. Make sure the instance name in `config.json` matches your Bluestacks instance name — the scanner asks for it interactively
-3. The scanner auto-detects the ADB port from the config file. If no `bluestacks.conf` exists, your instance likely always uses port 5555
-
-Not every Bluestacks variant has a config, that is not a limitation of the scanner but the installed android or Bluestacks versions. However, in those cases it is very likely that the port 5555 is used.
+- Run the game in **windowed mode** and keep the whole window visible on screen (not minimized, not covered by other windows) while scanning — the scanner takes screenshots of the screen area of the game.
+- Use a **16:9 client area** (e.g. 1600x900). All positions in `config/internal/kingdom.json` are written for 1600x900; other 16:9 sizes are scaled automatically.
+- The window title defaults to `Rise of Kingdoms` (partial matches work). Change it in the app or in `config/config.json` (`general.window_title`).
+- **Press F10 at any time to abort a running scan immediately** — the mouse is controlled by the scanner, so this is the quickest way out. Progress so far is saved. The GUI's stop button finishes the current governor first.
 
 ---
 
@@ -147,12 +114,8 @@ Not every Bluestacks variant has a config, that is not a limitation of the scann
 - **Kingdom scan only:** "Resume scan" starts from the governor currently visible on screen (the 4th one down)
 - Game Language must be **English** — other languages break inactive governor detection
 - Chinese characters may not render in CMD but are visible in the final export file
-- You can do other things on your PC while scanning, but avoid copying text since the scanner uses the clipboard to read names
+- The scanner uses your mouse and clipboard (to read names), so don't use the PC for anything else while it runs
 - **Important:** Always copy the scan `.xlsx` file when finished — on the next scan there is a (small) chance it gets overwritten
-
-### Configuration
-
-- Always use `\\` or forward slashes `/` in the Bluestacks path fields in config files (raw `\` will cause a `JSONDecodeError`)
 
 ## Getting Help
 

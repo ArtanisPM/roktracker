@@ -32,8 +32,8 @@ from roktracker.kingdom.config import (
 from roktracker.kingdom.governor_data import AdditionalGovernorData, GovernorData
 from roktracker.kingdom.governor_data_handler import GovernorDataHandler
 from roktracker.kingdom.options import KingdomScanOptions, StatsToScan
-from roktracker.utils.adb import AdvancedAdbClient
-from roktracker.utils.exceptions import GovernorNotFoundError
+from roktracker.utils.exceptions import GovernorNotFoundError, ScanAborted
+from roktracker.utils.game_window import GameWindowClient
 from roktracker.utils.general import (
     generate_random_id,
     load_cv2_img,
@@ -42,16 +42,25 @@ from roktracker.utils.general import (
     wait_random_range,
     write_cv2_img,
 )
+from roktracker.utils.icon_matching import find_copy_icon
 from roktracker.utils.ocr import (
     advancedProcessing,
     cropToRegion,
     ocr_number,
     ocr_text,
+    otsuProcessing,
     preprocess_and_ocr_number,
     preprocessImage,
+    read_governor_id,
 )
 
 logger = logging.getLogger(__name__)
+
+PLAUSIBLE_ID_LENGTH = (6, 10)
+"""Digit count of a believable governor id, used to recognize an open profile."""
+
+GOV_TAP_X = 800
+"""X position clicked on a row of the ranking list."""
 
 
 class KingdomScanner:
@@ -82,7 +91,6 @@ class KingdomScanner:
         self.ocr = cfg.ui_config
         self.cfg = cfg
 
-        self.advanced_scroll = True
         self.scan_options = KingdomScanOptions()
         self.stats_to_scan = StatsToScan()
         self.abort = False
@@ -109,14 +117,10 @@ class KingdomScanner:
         self.state_callback: Callable[[str], None] = lambda m: None
         self.output_handler: Callable[[str], None] = lambda m: None
 
-        adb_path = str(self.root_dir / "deps" / "platform-tools" / "adb.exe")
-
-        self.adb_client = AdvancedAdbClient(
-            adb_path,
-            config.general.adb_port,
-            config.general.emulator,
-            self.root_dir / "deps" / "inputs",
+        self.client = GameWindowClient(
+            config.general.window_title, max_random=config.timings.max_random
         )
+        self._data_handler: GovernorDataHandler | None = None
 
     def set_governor_callback(
         self, cb: Callable[[GovernorData, AdditionalGovernorData], None]
@@ -227,7 +231,7 @@ class KingdomScanner:
             int: Y component of coordinate
         """
         # Positions for next governor to check
-        Y = [285, 390, 490, 590, 605, 705, 805]
+        Y = [336, 406, 477, 547, 559, 629, 699]
 
         # skips only are relevant in the first 4 governors
         if current_position + skips < 4:
@@ -244,6 +248,50 @@ class KingdomScanner:
                     logging.INFO, "Reached final governor on the screen. Scan complete."
                 )
                 return Y[6]
+
+    def _profile_open(self) -> bool:
+        """Takes a screenshot and checks whether a governor profile is showing.
+
+        Three signs are checked one after the other, any of them counts:
+        the "GOVERNOR PROFILE" title bar (a flat banner, identical on every profile
+        skin), the "More Info" button text and a plausible governor id. The last two
+        are small text on top of the profile skin, which can be a busy picture, so
+        they alone are not reliable.
+
+        Returns:
+            bool: True if the profile is open
+        """
+        self.client.screencap().save(self.img_path / "check_more_info.png")
+        regions = self.ocr.regions
+
+        image_color = load_cv2_img(
+            self.img_path / "check_more_info.png", cv2.IMREAD_COLOR_BGR
+        )
+
+        title_bw = otsuProcessing(cropToRegion(image_color, regions.profile_title))
+        with PyTessBaseAPI(path=str(self.tesseract_path), psm=PSM.SINGLE_LINE) as api:
+            api.SetVariable("tessedit_char_whitelist", "GOVERNORPFILE")
+            api.SetImage(Image.fromarray(title_bw))  # type: ignore (pylance is messed up)
+            title_text = api.GetUTF8Text().upper()
+        if "GOVERN" in title_text or "PROFIL" in title_text:
+            return True
+
+        image_gray = load_cv2_img(
+            self.img_path / "check_more_info.png", cv2.IMREAD_GRAYSCALE
+        )
+        im_check_more_info = cropToRegion(image_gray, regions.more_info)
+        with PyTessBaseAPI(path=str(self.tesseract_path), psm=PSM.SINGLE_LINE) as api:
+            api.SetVariable("tessedit_char_whitelist", "MoreInfo")
+            api.SetImage(Image.fromarray(im_check_more_info))  # type: ignore (pylance is messed up)
+            check_more_info = api.GetUTF8Text()
+        if more_info_present(check_more_info):
+            return True
+
+        with PyTessBaseAPI(
+            path=str(self.tesseract_path), psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY
+        ) as api:
+            id_text = read_governor_id(api, image_color, regions.id)
+        return PLAUSIBLE_ID_LENGTH[0] <= len(id_text) <= PLAUSIBLE_ID_LENGTH[1]
 
     def _is_page_needed(self, page: int) -> bool:
         """Checks if a page is needed for the scan.
@@ -321,7 +369,7 @@ class KingdomScanner:
         self.state_callback("Opening governor")
         # Open governor
         gov_y = self._get_gov_position(current_player, self.inactive_players)
-        self.adb_client.secure_adb_tap((690, gov_y))
+        self.client.tap((GOV_TAP_X, gov_y))
 
         wait_random_range(self.timings.gov_open, self.max_random_delay)
 
@@ -331,27 +379,8 @@ class KingdomScanner:
         tap_positions = KingdomTapPositions()
 
         while not (gov_info):
-            self.adb_client.secure_adb_screencap().save(
-                self.img_path / "check_more_info.png"
-            )
-
-            image_check = load_cv2_img(
-                self.img_path / "check_more_info.png", cv2.IMREAD_GRAYSCALE
-            )
-
-            # Checking for more info
-            im_check_more_info = cropToRegion(image_check, self.ocr.regions.more_info)
-            check_more_info = ""
-
-            with PyTessBaseAPI(
-                path=str(self.tesseract_path), psm=PSM.SINGLE_LINE
-            ) as api:
-                api.SetVariable("tessedit_char_whitelist", "MoreInfo")
-                api.SetImage(Image.fromarray(im_check_more_info))  # type: ignore (pylance is messed up)
-                check_more_info = api.GetUTF8Text()
-
             # Probably tapped governor is inactive and needs to be skipped
-            if not more_info_present(check_more_info):
+            if not self._profile_open():
                 self.inactive_players += 1
                 if track_inactives:
                     image_check_inactive = load_cv2_img(
@@ -363,9 +392,9 @@ class KingdomScanner:
                         self._get_gov_position(
                             current_player, self.inactive_players - 1
                         )
-                        - 100,
-                        1400,
-                        200,
+                        - 70,
+                        1600,
+                        140,
                     )
                     image_inactive_raw = cropToRegion(image_check_inactive, roiInactive)
                     write_cv2_img(
@@ -374,15 +403,13 @@ class KingdomScanner:
                         "png",
                     )
 
-                if self.advanced_scroll:
-                    self.adb_client.adb_send_events(
-                        "Touch",
-                        "kingdom_1_person_scroll.txt",
+                # drag the list up by one row
+                self.client.swipe(GOV_TAP_X, 559, GOV_TAP_X, 489)
+                self.client.tap(
+                    (
+                        GOV_TAP_X,
+                        self._get_gov_position(current_player, self.inactive_players),
                     )
-                else:
-                    self.adb_client.secure_adb_shell("input swipe 690 605 690 540")
-                self.adb_client.secure_adb_tap(
-                    (690, self._get_gov_position(current_player, self.inactive_players))
                 )
                 count += 1
                 wait_random_range(self.timings.gov_open, self.max_random_delay)
@@ -426,7 +453,7 @@ class KingdomScanner:
             self.state_callback("Scanning general page")
 
             # take screenshot before copying the name
-            self.adb_client.secure_adb_screencap().save(self.img_path / "gov_info.png")
+            self.client.screencap().save(self.img_path / "gov_info.png")
             image = load_cv2_img(self.img_path / "gov_info.png", cv2.IMREAD_UNCHANGED)
 
             if self.stats_to_scan.name:
@@ -434,7 +461,8 @@ class KingdomScanner:
                 copy_try = 0
                 while copy_try < 3:
                     try:
-                        self.adb_client.secure_adb_tap(tap_positions.name)
+                        icon = find_copy_icon(image[..., :3], ui_positions.name_search)
+                        self.client.tap((icon.x, icon.y) if icon else tap_positions.name)
                         wait_random_range(self.timings.copy_wait, self.max_random_delay)
                         governor_data.name = copykitten.paste()
                         break
@@ -476,10 +504,7 @@ class KingdomScanner:
 
                 api.SetPageSegMode(PSM.SINGLE_LINE)
                 if self.stats_to_scan.id:
-                    im_gov_id = cropToRegion(image, ui_positions.id)
-                    im_gov_id_bw = advancedProcessing(im_gov_id, 3, "dimmed white")
-
-                    governor_data.id = ocr_number(api, im_gov_id_bw)
+                    governor_data.id = read_governor_id(api, image, ui_positions.id)
 
                 if self.stats_to_scan.alliance:
                     im_alliance_tag = cropToRegion(image, ui_positions.alliance)
@@ -489,11 +514,11 @@ class KingdomScanner:
 
         if self._is_page_needed(2):
             # kills tier
-            self.adb_client.secure_adb_tap(tap_positions.kills)
+            self.client.tap(tap_positions.kills)
             self.state_callback("Scanning kills page")
             wait_random_range(self.timings.kills_open, self.max_random_delay)
 
-            self.adb_client.secure_adb_screencap().save(
+            self.client.screencap().save(
                 self.img_path / "kills_tier.png"
             )
             image2 = load_cv2_img(
@@ -565,12 +590,17 @@ class KingdomScanner:
                         api, image2, ui_positions.ranged_points
                     )
 
+            # Close the popup, otherwise it can swallow the click on More Info
+            if any(tap_positions.dismiss_popup):
+                self.client.tap(tap_positions.dismiss_popup)
+                wait_random_range(self.timings.popup_dismiss, self.max_random_delay)
+
         if self._is_page_needed(3):
             # More info tab
-            self.adb_client.secure_adb_tap(tap_positions.info)
+            self.client.tap(tap_positions.info)
             self.state_callback("Scanning more info page")
             wait_random_range(self.timings.info_open, self.max_random_delay)
-            self.adb_client.secure_adb_screencap().save(self.img_path / "more_info.png")
+            self.client.screencap().save(self.img_path / "more_info.png")
             image3 = load_cv2_img(self.img_path / "more_info.png", cv2.IMREAD_UNCHANGED)
 
             with PyTessBaseAPI(
@@ -601,9 +631,9 @@ class KingdomScanner:
 
         self.state_callback("Closing governor")
         if self._is_page_needed(3):
-            self.adb_client.secure_adb_tap(tap_positions.close_info)  # close more info
+            self.client.tap(tap_positions.close_info)  # close more info
             wait_random_range(self.timings.info_close, self.max_random_delay)
-        self.adb_client.secure_adb_tap(tap_positions.close_gov)  # close governor info
+        self.client.tap(tap_positions.close_gov)  # close governor info
         wait_random_range(self.timings.gov_close, self.max_random_delay)
 
         end_time = time.time()
@@ -614,6 +644,28 @@ class KingdomScanner:
         return governor_data
 
     def start_scan(self, options: KingdomScanOptions):
+        """Start a kingdom scan, see _scan.
+
+        Pressing F10 aborts the scan immediately and keeps the progress so far.
+
+        Args:
+            options (KingdomScanOptions): Scan options to use
+
+        Raises:
+            GameWindowError: If the game window can't be found or got closed
+        """
+        try:
+            self._scan(options)
+        except ScanAborted as e:
+            self.output_handler(str(e))
+            logging.log(logging.INFO, str(e))
+            if self._data_handler is not None:
+                self._data_handler.save()
+            self.state_callback("Scan aborted")
+        finally:
+            self.client.stop()
+
+    def _scan(self, options: KingdomScanOptions):
         """Start a kingdom scan.
 
         It is expected that the user has a kingdom ranking screen like individual power/killpoints open.
@@ -622,7 +674,7 @@ class KingdomScanner:
             options (KingdomScanOptions): Scan options to use
         """
         self.state_callback("Initializing")
-        self.adb_client.start_adb()
+        self.client.start()
 
         amount = options.amount
         if options.track_inactives:
@@ -642,6 +694,7 @@ class KingdomScanner:
 
         filename = f"{file_name_prefix}{amount - j}-{self.start_date}-{options.scan_name}-[{self.run_id}]"
         data_handler = GovernorDataHandler(self.scan_path, filename, options.formats)
+        self._data_handler = data_handler
 
         self.stats_to_scan = options.stats_to_scan
 
@@ -673,7 +726,7 @@ class KingdomScanner:
             # Check for duplicate governor
             if data_handler.is_duplicate(to_int_check(gov_data.id)):
                 roi = (196, 698, 52, 27)
-                self.adb_client.secure_adb_screencap().save(
+                self.client.screencap().save(
                     self.img_path / "currentState.png"
                 )
                 image = load_cv2_img(
@@ -782,7 +835,6 @@ class KingdomScanner:
         data_handler.save()
         self.output_handler("Reached the target amount of people. Scan complete.")
         logging.log(logging.INFO, "Reached the target amount of people. Scan complete.")
-        self.adb_client.kill_adb()  # make sure to clean up adb server
         self.state_callback("Scan finished")
         return
 

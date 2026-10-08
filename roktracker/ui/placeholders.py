@@ -24,27 +24,10 @@ KINGDOM_STATS_PLACEHOLDER = [
     InfoValue(name="alliance", display_name="Alliance", value="Biggest Alliance ever!"),
 ]
 
-RANKING_STATS_PLACEHOLDER = [
-    InfoValue(name="governor_0", display_name="Super Governor 1", value="1000"),
-    InfoValue(name="governor_1", display_name="Super Governor 2", value="500"),
-    InfoValue(name="governor_2", display_name="Super Governor 3", value="250"),
-    InfoValue(name="governor_3", display_name="Super Governor 4", value="125"),
-    InfoValue(name="governor_4", display_name="Super Governor 5", value="64"),
-    InfoValue(name="governor_5", display_name="Super Governor 6", value="32"),
-]
-
 ADDITIONAL_STATS_PLACEHOLDER = AdditionalInfoData(
     current_time="00:00:00",
     eta_remaining="00:00:00",
     current_amount=0,
     target_amount=300,
     skipped=0,
-)
-
-ADDITIONAL_RANKING_STATS_PLACEHOLDER = AdditionalInfoData(
-    current_time="00:00:00",
-    eta_remaining="00:00:00",
-    current_amount=0,
-    target_amount=100,
-    skipped=-1,
 )

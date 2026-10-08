@@ -1,6 +1,7 @@
 {
   "$defs": {
     "KingdomTapPositions": {
+      "description": "Tap coordinates for navigating the governor screens.",
       "properties": {
         "name": {
           "default": [
@@ -36,6 +37,24 @@
             }
           ],
           "title": "Kills",
+          "type": "array"
+        },
+        "dismiss_popup": {
+          "default": [
+            0,
+            0
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Dismiss Popup",
           "type": "array"
         },
         "info": {
@@ -97,7 +116,34 @@
       "type": "object"
     },
     "KingdomUIRegions": {
+      "description": "OCR region coordinates for extracting governor data from screen sections.",
       "properties": {
+        "profile_title": {
+          "default": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Profile Title",
+          "type": "array"
+        },
         "more_info": {
           "default": [
             0,
@@ -122,6 +168,32 @@
             }
           ],
           "title": "More Info",
+          "type": "array"
+        },
+        "name_search": {
+          "default": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Name Search",
           "type": "array"
         },
         "id": {
@@ -675,6 +747,7 @@
       "type": "object"
     },
     "UIConfig": {
+      "description": "UI configuration for a governor profile.",
       "properties": {
         "profile_version": {
           "maxItems": 4,
@@ -720,7 +793,7 @@
       "type": "object"
     }
   },
-  "description": "Kingdom scanner configuration. Each subclass provides this.",
+  "description": "Config options related to a kingdom scan.",
   "properties": {
     "scan_path": {
       "title": "Scan Path",

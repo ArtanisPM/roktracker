@@ -9,7 +9,6 @@ from roktracker.common.config import AppConfig
 from roktracker.ui.config import GUIConfig
 from roktracker.ui.header_frame import HeaderFrame
 from roktracker.ui.kingdom_scanner_ui import KingdomScannerUI
-from roktracker.ui.ranking_scanner_ui import RankingScannerUI
 from roktracker.utils.exception_handling import GuiExceptionHandler
 from roktracker.utils.validator import validate_installation
 
@@ -40,6 +39,5 @@ header_frame.pack(fill="x", padx=5, pady=(5, 0))
 tab_frame = ttk.Notebook(root)
 tab_frame.pack(padx=5, pady=5)
 tab_frame.add(KingdomScannerUI(tab_frame, AppConfig()), text="Kingdom")
-tab_frame.add(RankingScannerUI(tab_frame, AppConfig()), text="Rankings")
 
 root.mainloop()

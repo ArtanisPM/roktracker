@@ -1,13 +1,19 @@
 """Custom exception classes for the rok tracker.
 
-Defines AdbError and GovernorNotFoundError."""
+Defines GameWindowError, ScanAborted and GovernorNotFoundError."""
 
 
-class AdbError(RuntimeError):
-    """An error with the ADB connection.
+class GameWindowError(RuntimeError):
+    """An error with the game window.
 
-    Most likely the ADB server crashed or the connection timed out.
+    Most likely the window was not found, is minimized or got closed during the scan.
     """
+
+    pass
+
+
+class ScanAborted(RuntimeError):
+    """The scan was aborted by the user with the emergency hotkey (F10)."""
 
     pass
 

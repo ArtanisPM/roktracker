@@ -2,7 +2,6 @@ import logging
 import signal
 import sys
 import threading
-from typing import Literal
 
 import questionary
 
@@ -13,14 +12,9 @@ from roktracker.kingdom.config import KingdomConfig
 from roktracker.kingdom.governor_printer import print_gov_state
 from roktracker.kingdom.options import STAT_LABELS, KingdomScanOptions, StatsToScan
 from roktracker.kingdom.scanner import KingdomScanner
-from roktracker.ranking.batch_printer import print_batch
-from roktracker.ranking.config import RankingConfig
-from roktracker.ranking.options import RankingScanOptions
-from roktracker.ranking.scanner import RankingScanner
-from roktracker.utils.adb import get_bluestacks_port
 from roktracker.utils.console import console
 from roktracker.utils.exception_handling import ConsoleExceptionHandler
-from roktracker.utils.exceptions import AdbError
+from roktracker.utils.exceptions import GameWindowError
 from roktracker.utils.general import is_string_float, is_string_int
 from roktracker.utils.ocr import get_supported_langs
 from roktracker.utils.validator import sanitize_scan_name, validate_installation
@@ -41,7 +35,7 @@ sys.excepthook = ex_handler.handle_exception
 threading.excepthook = ex_handler.handle_thread_exception
 
 
-def ask_abort(scanner: KingdomScanner | RankingScanner) -> None:
+def ask_abort(scanner: KingdomScanner) -> None:
     stop = questionary.confirm(
         message="Do you want to stop the scanner?:", auto_enter=False, default=False
     ).ask()
@@ -63,18 +57,10 @@ def run_kingdom_scan(config: AppConfig):
     options = default_options
 
     try:
-        config.general.bluestacks.name = questionary.text(
-            message="Name of your bluestacks instance:",
-            default=config.general.bluestacks.name,
+        config.general.window_title = questionary.text(
+            message="Title of the game window:",
+            default=config.general.window_title,
         ).unsafe_ask()
-
-        config.general.adb_port = int(
-            questionary.text(
-                f"Adb port of device (detected {get_bluestacks_port(config)}):",
-                default=str(get_bluestacks_port(config)),
-                validate=is_string_int,
-            ).unsafe_ask()
-        )
 
         options.scan_name = questionary.text(
             message="Kingdom name (used for file name):",
@@ -105,11 +91,6 @@ def run_kingdom_scan(config: AppConfig):
             default=default_options.continued,
         ).unsafe_ask()
 
-        options.advanced_scroll = questionary.confirm(
-            message="Use advanced scrolling method:",
-            auto_enter=False,
-            default=default_options.advanced_scroll,
-        ).unsafe_ask()
 
         options.track_inactives = questionary.confirm(
             message="Screenshot inactives:",
@@ -287,119 +268,10 @@ def run_kingdom_scan(config: AppConfig):
         signal.signal(signal.SIGINT, lambda _, __: ask_abort(kingdom_scanner))
 
         kingdom_scanner.start_scan(options)
-    except AdbError as error:
-        logger.error(
-            "An error with the adb connection occurred (probably wrong port). Exact message: "
-            + str(error)
-        )
+    except GameWindowError as error:
+        logger.error("An error with the game window occurred: " + str(error))
         console.print(
-            "An error with the adb connection occurred. Please verify that you use the correct port.\nExact message: "
-            + str(error)
-        )
-
-
-def run_ranking_scan(
-    config: AppConfig, scanner_type: Literal["Seed", "Alliance", "Honor"]
-):
-    root_dir = get_app_root()
-
-    default_options = RankingScanOptions.from_json(
-        root_dir / "config" / f"{scanner_type.lower()}_defaults.json"
-    )
-    options = RankingScanOptions()
-
-    try:
-        config.general.bluestacks.name = questionary.text(
-            message="Name of your bluestacks instance:",
-            default=config.general.bluestacks.name,
-        ).unsafe_ask()
-
-        config.general.adb_port = int(
-            questionary.text(
-                f"Adb port of device (detected {get_bluestacks_port(config)}):",
-                default=str(get_bluestacks_port(config)),
-                validate=is_string_int,
-            ).unsafe_ask()
-        )
-
-        options.scan_name = questionary.text(
-            message="Scan name:",
-            default=default_options.scan_name,
-        ).unsafe_ask()
-
-        validated_name = sanitize_scan_name(options.scan_name)
-        while not validated_name.valid:
-            kingdom = questionary.text(
-                message="Alliance name (Previous name was invalid):",
-                default=validated_name.result,
-            ).unsafe_ask()
-            validated_name = sanitize_scan_name(kingdom)
-        options.scan_name = validated_name.result
-
-        options.amount = int(
-            questionary.text(
-                message="Number of people to scan:",
-                validate=is_string_int,
-                default=str(default_options.amount),
-            ).unsafe_ask()
-        )
-
-        save_formats_tmp = questionary.checkbox(
-            "In what format should the result be saved?",
-            choices=[
-                questionary.Choice(
-                    "Excel (xlsx)",
-                    value="xlsx",
-                    checked=default_options.formats.xlsx,
-                ),
-                questionary.Choice(
-                    "Comma separated values (csv)",
-                    value="csv",
-                    checked=default_options.formats.csv,
-                ),
-                questionary.Choice(
-                    "JSON Lines (jsonl)",
-                    value="jsonl",
-                    checked=default_options.formats.jsonl,
-                ),
-            ],
-        ).unsafe_ask()
-
-        if save_formats_tmp == [] or save_formats_tmp is None:
-            console.print("Exiting, no formats selected.")
-            return
-        else:
-            options.formats = OutputFormats.from_list(save_formats_tmp)
-    except Exception as e:
-        logger.error(e)
-        sys.exit(-1)
-    except KeyboardInterrupt:
-        console.log("User abort. Exiting scanner.")
-        sys.exit(3)
-
-    try:
-        scanner = RankingScanner(
-            config,
-            RankingConfig.from_json(
-                root_dir / "config" / "internal" / f"{scanner_type.lower()}.json"
-            ),
-        )
-        scanner.set_batch_callback(print_batch)
-
-        console.print(
-            f"The UUID of this scan is [green]{scanner.run_id}[/green]",
-            highlight=False,
-        )
-        signal.signal(signal.SIGINT, lambda _, __: ask_abort(scanner))
-
-        scanner.start_scan(options)
-    except AdbError as error:
-        logger.error(
-            "An error with the adb connection occurred (probably wrong port). Exact message: "
-            + str(error)
-        )
-        console.print(
-            "An error with the adb connection occurred. Please verify that you use the correct port.\nExact message: "
+            "An error with the game window occurred. Please verify that the game is running (not minimized) and the window title is correct.\nExact message: "
             + str(error)
         )
 
@@ -420,23 +292,7 @@ def main():
         + get_supported_langs(str(get_app_root() / "deps" / "tessdata"))
     )
 
-    try:
-        scanner_type: Literal["Kingdom", "Seed", "Alliance", "Honor"] = (
-            questionary.select(
-                "Select the scanner you want to use:",
-                ["Kingdom", "Seed", "Alliance", "Honor"],
-                "Kingdom",
-            ).unsafe_ask()
-        )
-    except KeyboardInterrupt:
-        console.log("User abort. Exiting scanner.")
-        sys.exit(3)
-
-    match scanner_type:
-        case "Kingdom":
-            run_kingdom_scan(config)
-        case _:
-            run_ranking_scan(config, scanner_type)
+    run_kingdom_scan(config)
 
 
 if __name__ == "__main__":

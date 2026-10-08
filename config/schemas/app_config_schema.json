@@ -1,49 +1,19 @@
 {
   "$defs": {
-    "BluestacksConfig": {
-      "properties": {
-        "name": {
-          "default": "RoK Tracker",
-          "title": "Name",
-          "type": "string"
-        },
-        "config": {
-          "default": "C:\\ProgramData\\Bluestacks_nxt\\bluestacks.conf",
-          "title": "Config",
-          "type": "string"
-        }
-      },
-      "title": "BluestacksConfig",
-      "type": "object"
-    },
     "GeneralConfig": {
+      "description": "General application settings (game window title).",
       "properties": {
-        "emulator": {
-          "default": "bluestacks",
-          "enum": [
-            "bluestacks",
-            "ld"
-          ],
-          "title": "Emulator",
+        "window_title": {
+          "default": "Rise of Kingdoms",
+          "title": "Window Title",
           "type": "string"
-        },
-        "adb_port": {
-          "default": 5555,
-          "title": "Adb Port",
-          "type": "integer"
-        },
-        "bluestacks": {
-          "$ref": "#/$defs/BluestacksConfig",
-          "default": {
-            "name": "RoK Tracker",
-            "config": "C:\\ProgramData\\Bluestacks_nxt\\bluestacks.conf"
-          }
         }
       },
       "title": "GeneralConfig",
       "type": "object"
     },
     "ScanTimings": {
+      "description": "Waiting timings between actions during kingdom scanning.",
       "properties": {
         "gov_open": {
           "default": 2.0,
@@ -75,6 +45,11 @@
           "title": "Gov Close",
           "type": "number"
         },
+        "popup_dismiss": {
+          "default": 0.5,
+          "title": "Popup Dismiss",
+          "type": "number"
+        },
         "max_random": {
           "default": 0.5,
           "title": "Max Random",
@@ -85,7 +60,7 @@
       "type": "object"
     }
   },
-  "description": "This is the collection of all globally configured values.\nIt uses default values or loads from the config.json file.",
+  "description": "Collection of all globally configured values.\n\nIt uses default values or loads from the config.json file.",
   "properties": {
     "timings": {
       "$ref": "#/$defs/ScanTimings",
@@ -96,18 +71,14 @@
         "info_open": 1.0,
         "info_close": 0.5,
         "gov_close": 1.0,
+        "popup_dismiss": 0.5,
         "max_random": 0.5
       }
     },
     "general": {
       "$ref": "#/$defs/GeneralConfig",
       "default": {
-        "emulator": "bluestacks",
-        "adb_port": 5555,
-        "bluestacks": {
-          "config": "C:\\ProgramData\\Bluestacks_nxt\\bluestacks.conf",
-          "name": "RoK Tracker"
-        }
+        "window_title": "Rise of Kingdoms"
       }
     }
   },

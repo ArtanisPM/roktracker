@@ -13,7 +13,11 @@ class KingdomUIRegions(BaseModel):
     """OCR region coordinates for extracting governor data from screen sections."""
 
     # first screen
+    profile_title: tuple[int, int, int, int] = (0, 0, 0, 0)
+    """The "GOVERNOR PROFILE" title bar, identical on every profile skin."""
     more_info: tuple[int, int, int, int] = (0, 0, 0, 0)
+    name_search: tuple[int, int, int, int] = (0, 0, 0, 0)
+    """The name row, searched for the copy-name icon."""
     id: tuple[int, int, int, int] = (0, 0, 0, 0)
     power: tuple[int, int, int, int] = (0, 0, 0, 0)
     killpoints: tuple[int, int, int, int] = (0, 0, 0, 0)
@@ -45,7 +49,10 @@ class KingdomTapPositions(BaseModel):
     """Tap coordinates for navigating the governor screens."""
 
     name: tuple[int, int] = (0, 0)
+    """Fallback position of the copy-name icon, only used if the icon is not found."""
     kills: tuple[int, int] = (0, 0)
+    dismiss_popup: tuple[int, int] = (0, 0)
+    """Spot tapped to close the kill statistics popup. (0, 0) = don't."""
     info: tuple[int, int] = (0, 0)
     close_gov: tuple[int, int] = (0, 0)
 

@@ -98,7 +98,6 @@ class KingdomScanOptions(BaseModel):
     reconstruct_kills: bool = True
     validate_power: bool = False
     power_threshold: int = 100_000
-    advanced_scroll: bool = True
     formats: OutputFormats = OutputFormats()
 
     @classmethod

@@ -3,7 +3,6 @@
   "scan_name": "",
   "amount": 300,
   "continued": false,
-  "advanced_scroll": true,
   "track_inactives": false,
   "validate_kills": true,
   "reconstruct_kills": true,
