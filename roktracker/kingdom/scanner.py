@@ -50,8 +50,10 @@ from roktracker.utils.ocr import (
     cropToRegion,
     ocr_number,
     ocr_text,
+    otsuProcessing,
     preprocess_and_ocr_number,
     preprocessImage,
+    read_governor_id,
 )
 
 logger = logging.getLogger(__name__)
@@ -348,18 +350,37 @@ class KingdomScanner:
     def _profile_open(self) -> bool:
         """Takes a screenshot and checks whether a governor profile is showing.
 
-        Either the "More Info" button text or a plausible governor id counts, so one
-        unreliable OCR region can't make the scan think the profile never opened.
+        Three signs are checked one after the other, any of them counts:
+        the "GOVERNOR PROFILE" title bar (a flat banner, identical on every profile
+        skin), the "More Info" button text and a plausible governor id. The last two
+        are small text on top of the profile skin, which can be a busy picture, so
+        they alone are not reliable.
 
         Returns:
             bool: True if the profile is open
         """
         self.client.screencap().save(self.img_path / "check_more_info.png")
+        regions = self.ocr.regions
+
+        image_color = load_cv2_img(
+            self.img_path / "check_more_info.png", cv2.IMREAD_COLOR_BGR
+        )
+
+        if self._region_set(regions.profile_title):
+            title_bw = otsuProcessing(cropToRegion(image_color, regions.profile_title))
+            with PyTessBaseAPI(
+                path=str(self.tesseract_path), psm=PSM.SINGLE_LINE
+            ) as api:
+                api.SetVariable("tessedit_char_whitelist", "GOVERNORPFILE")
+                api.SetImage(Image.fromarray(title_bw))  # type: ignore (pylance is messed up)
+                title_text = api.GetUTF8Text().upper()
+            if "GOVERN" in title_text or "PROFIL" in title_text:
+                return True
 
         image_gray = load_cv2_img(
             self.img_path / "check_more_info.png", cv2.IMREAD_GRAYSCALE
         )
-        im_check_more_info = cropToRegion(image_gray, self.ocr.regions.more_info)
+        im_check_more_info = cropToRegion(image_gray, regions.more_info)
         with PyTessBaseAPI(
             path=str(self.tesseract_path), psm=PSM.SINGLE_LINE
         ) as api:
@@ -370,19 +391,13 @@ class KingdomScanner:
         if more_info_present(check_more_info):
             return True
 
-        if not self._region_set(self.ocr.regions.id):
+        if not self._region_set(regions.id):
             return False
 
-        image_color = load_cv2_img(
-            self.img_path / "check_more_info.png", cv2.IMREAD_COLOR_BGR
-        )
-        im_id = advancedProcessing(
-            cropToRegion(image_color, self.ocr.regions.id), 3, "dimmed white"
-        )
         with PyTessBaseAPI(
             path=str(self.tesseract_path), psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY
         ) as api:
-            id_text = ocr_number(api, im_id, empty_retry=False)
+            id_text = read_governor_id(api, image_color, regions.id)
         return PLAUSIBLE_ID_LENGTH[0] <= len(id_text) <= PLAUSIBLE_ID_LENGTH[1]
 
     def _save_inactive_screenshot(self, current_position: int) -> None:
@@ -660,10 +675,7 @@ class KingdomScanner:
 
                 api.SetPageSegMode(PSM.SINGLE_LINE)
                 if self.stats_to_scan.id and self._region_set(ui_positions.id):
-                    im_gov_id = cropToRegion(image, ui_positions.id)
-                    im_gov_id_bw = advancedProcessing(im_gov_id, 3, "dimmed white")
-
-                    governor_data.id = ocr_number(api, im_gov_id_bw)
+                    governor_data.id = read_governor_id(api, image, ui_positions.id)
                     self._track_governor_id(governor_data.id)
 
                 if self.stats_to_scan.alliance and self._region_set(

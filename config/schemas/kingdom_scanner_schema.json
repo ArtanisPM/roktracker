@@ -184,6 +184,32 @@
     "KingdomUIRegions": {
       "description": "OCR region coordinates for extracting governor data from screen sections.",
       "properties": {
+        "profile_title": {
+          "default": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Profile Title",
+          "type": "array"
+        },
         "more_info": {
           "default": [
             0,

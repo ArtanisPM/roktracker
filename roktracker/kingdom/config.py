@@ -16,6 +16,9 @@ class KingdomUIRegions(BaseModel):
     """OCR region coordinates for extracting governor data from screen sections."""
 
     # first screen
+    profile_title: tuple[int, int, int, int] = (0, 0, 0, 0)
+    """The "GOVERNOR PROFILE" title bar. It looks the same on every profile skin,
+    so it is the most reliable sign that a profile is open."""
     more_info: tuple[int, int, int, int] = (0, 0, 0, 0)
     name_search: tuple[int, int, int, int] = (0, 0, 0, 0)
     """The name row, searched for the copy-name icon."""
