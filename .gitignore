@@ -1,9 +1,0 @@
-__pycache__/
-*.pyc
-.venv/
-temp_images/
-calibration/
-scans_*/
-manual_review/
-inactives/
-*.log
