@@ -1,4 +1,0 @@
-{
-  "$schema": "./schemas/gui_config_schema.json",
-  "default_theme": "darkly"
-}
