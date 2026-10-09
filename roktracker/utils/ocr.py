@@ -315,6 +315,38 @@ def ocr_number(
     return score
 
 
+def read_page_number(
+    api: tesserocr.PyTessBaseAPI, image: MatLike, region: Tuple[int, int, int, int]
+) -> str:
+    """Reads a number from the governor profile page.
+
+    First the original method is used (white text mask). Only if that reads nothing,
+    methods that adapt to the background are tried. On some profile skins and for
+    short numbers the white mask is clean but Tesseract still returns nothing.
+
+    Args:
+        api (tesserocr.PyTessBaseAPI): The ocr api to use
+        image (MatLike): The profile screenshot in BGR format
+        region (Tuple[int, int, int, int]): The region in (x, y, w, h) format
+
+    Returns:
+        str: The detected digits, empty if nothing could be read
+    """
+    crop = cropToRegion(image, region)
+    digits = ocr_number(api, advancedProcessing(crop, 3, "white"))
+    if digits:
+        return digits
+
+    for method in (
+        lambda: tophatProcessing(crop, 3, 7),
+        lambda: relativeThresholdProcessing(crop, 3, 0.45),
+    ):
+        digits = ocr_number(api, method(), empty_retry=False)
+        if digits:
+            return digits
+    return ""
+
+
 def ocr_text(api: tesserocr.PyTessBaseAPI, image: MatLike) -> str:
     """Extracts a string from the image.
 

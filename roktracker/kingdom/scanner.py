@@ -52,6 +52,7 @@ from roktracker.utils.ocr import (
     preprocess_and_ocr_number,
     preprocessImage,
     read_governor_id,
+    read_page_number,
 )
 
 logger = logging.getLogger(__name__)
@@ -475,32 +476,24 @@ class KingdomScanner:
                 path=str(self.tesseract_path), psm=PSM.SINGLE_LINE, oem=OEM.LSTM_ONLY
             ) as api:
                 if self.stats_to_scan.power:
-                    im_gov_power = cropToRegion(image, ui_positions.power)
-                    im_gov_power_bw = advancedProcessing(im_gov_power, 3, "white")
-
-                    governor_data.power = ocr_number(api, im_gov_power_bw)
+                    governor_data.power = read_page_number(
+                        api, image, ui_positions.power
+                    )
 
                 if self.stats_to_scan.killpoints:
-                    im_gov_killpoints = cropToRegion(image, ui_positions.killpoints)
-                    im_gov_killpoints_bw = advancedProcessing(
-                        im_gov_killpoints, 3, "white"
+                    governor_data.killpoints = read_page_number(
+                        api, image, ui_positions.killpoints
                     )
-
-                    governor_data.killpoints = ocr_number(api, im_gov_killpoints_bw)
 
                 if self.stats_to_scan.acclaim:
-                    im_gov_acclaim = cropToRegion(image, ui_positions.acclaim)
-                    im_gov_acclaim_bw = advancedProcessing(im_gov_acclaim, 3, "white")
-
-                    governor_data.acclaim = ocr_number(api, im_gov_acclaim_bw)
-
-                if self.stats_to_scan.acclaim_max:
-                    im_gov_acclaim_max = cropToRegion(image, ui_positions.acclaim_max)
-                    im_gov_acclaim_max_bw = advancedProcessing(
-                        im_gov_acclaim_max, 3, "white"
+                    governor_data.acclaim = read_page_number(
+                        api, image, ui_positions.acclaim
                     )
 
-                    governor_data.acclaim_max = ocr_number(api, im_gov_acclaim_max_bw)
+                if self.stats_to_scan.acclaim_max:
+                    governor_data.acclaim_max = read_page_number(
+                        api, image, ui_positions.acclaim_max
+                    )
 
                 api.SetPageSegMode(PSM.SINGLE_LINE)
                 if self.stats_to_scan.id:
