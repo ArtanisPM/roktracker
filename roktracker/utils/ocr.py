@@ -295,15 +295,22 @@ def ocr_number(
     Returns:
         str: The digits that got detected
     """
-    api.SetImage(Image.fromarray(image))  # type: ignore
-    score_raw = api.GetUTF8Text()
-    score = re.sub("[^0-9]", "", score_raw)
-
-    if score == "" and empty_retry:
-        img_try_2 = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
-        api.SetImage(Image.fromarray(img_try_2))  # type: ignore
+    # Only digits are possible here. Without this a lone "0" is often read as the
+    # letter "O", which the cleanup below then removes, leaving an empty result.
+    api.SetVariable("tessedit_char_whitelist", "0123456789")
+    try:
+        api.SetImage(Image.fromarray(image))  # type: ignore
         score_raw = api.GetUTF8Text()
         score = re.sub("[^0-9]", "", score_raw)
+
+        if score == "" and empty_retry:
+            img_try_2 = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
+            api.SetImage(Image.fromarray(img_try_2))  # type: ignore
+            score_raw = api.GetUTF8Text()
+            score = re.sub("[^0-9]", "", score_raw)
+    finally:
+        # the same api is also used to read text (alliance), so undo the filter
+        api.SetVariable("tessedit_char_whitelist", "")
 
     return score
 
